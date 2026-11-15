@@ -208,3 +208,46 @@ All upstream skills and referenced tooling belong to their respective creators a
 - `diagram-design` © Cathryn Lavery ([cathrynlavery/diagram-design](https://github.com/cathrynlavery/diagram-design))
 
 *Built by [Vaibhav](https://github.com/vaibhav-space) through thousands of hours of building real systems with AI agents.*
+
+---
+
+<!-- ===== Fork additions below this line. Upstream text above is unchanged. ===== -->
+
+## Hardware profile (fork additions)
+
+This fork (`mtrunzo12/ai-coding-workflow`) adds a hardware-design adaptation of the workflow above for KiCad/PCB projects, hosted centrally and installed by symlink so one `git pull` updates every machine and project. Upstream files are untouched; everything new lives in new paths, so `git fetch upstream && git merge upstream/main` stays clean.
+
+### Layout
+
+```text
+profiles/hardware/
+├── workflow.md                 # Hardware directives: lifecycle routing, approval gates (purchase/fab/energize/stackup),
+│                               # verification gate (ERC/DRC/netlist/BOM diff/hash/datasheet/render), FABLE CHECK NEEDED
+├── prompts/
+│   ├── planning.md             # Stage 1: measurable acceptance criteria (clearance, current, thermal, BOM, hashes)
+│   ├── critical-plan-review.md # Stage 2: Fable adversarial review in fresh context, YAGNI brake
+│   └── pre-merge-review.md     # Stage 3: KiCad object diff + DRC/ERC audit against the approved plan
+├── rules/hardware-design.md    # Path-scoped Claude Code rule (loads on *.kicad_pcb, *.kicad_sch, ... reads/edits)
+└── PROJECT-SNIPPET.md          # Lines to add to a project's CLAUDE.md/AGENTS.md; proposed DoorAlarm diff
+learnings/                      # Sanitized lessons: README (flow), _template, INDEX, dated entries
+install.sh                      # Symlink installer: --dry-run, --target DIR, --learnings-dir DIR
+```
+
+### Install
+
+```bash
+./install.sh --dry-run          # show what would change
+./install.sh                    # links ~/.claude/hardware, ~/.claude/rules/hardware-design.md, ~/.claude/hardware-learnings
+```
+
+The installer is idempotent, never overwrites (anything in the way is moved to `*.bak-<timestamp>`), and never writes `~/.claude/CLAUDE.md`: the upstream software directives are deliberately not installed globally, so non-hardware projects are unaffected. The global rule carries `paths:` frontmatter and, per the Claude Code memory docs, loads only when Claude reads or edits a matching CAD/fab file. For a hardware project to get the workflow at session start, add the one-line `@~/.claude/hardware/workflow.md` import from `PROJECT-SNIPPET.md` to its `CLAUDE.md` (one-time external-import approval per project).
+
+### Update
+
+- This fork on a machine: `git pull` in this checkout; the symlinks pick it up immediately.
+- From upstream: `git fetch upstream && git merge upstream/main` (no overlap with fork paths).
+- Re-run `./install.sh` only if link targets move; it reports `ok` when nothing changed.
+
+### Learnings flow
+
+At wind-down the agent proposes entries (what happened, the rule it implies, which `profiles/hardware/` file would change, evidence by file and section); the owner approves; approved entries land in the learnings directory and `INDEX.md`; entries that generalize are promoted by a PR that edits `profiles/hardware/`. This repository is public, so `learnings/` holds only sanitized, generic entries; `learnings/README.md` recommends a private repository for raw lessons, configured with `install.sh --learnings-dir` or `LEARNINGS_DIR`.
